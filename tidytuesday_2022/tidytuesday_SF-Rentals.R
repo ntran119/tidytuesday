@@ -142,6 +142,8 @@ q3_slope <- q3_coeff %>%
 
 print(q3_slope)
 
+# solano, price increases by 0.636 per sqft
+# marin, price increases by 1.33 per sqft
 
 ####machine learning predict using knn####
 train_indices <- createDataPartition(y=q3dfclean$price,
