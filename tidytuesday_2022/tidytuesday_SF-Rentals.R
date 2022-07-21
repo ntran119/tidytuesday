@@ -105,12 +105,13 @@ q3df_z <- q3dfclean %>%
   filter(zscore < 3)
 
 #filter out outliers based on z-score
-
-ggplot(q3df_z, aes(sqft, price)) + 
-  geom_point() +
+#plot
+ggplot(q3df_z, aes(sqft, price, color = year)) + 
+  geom_point(alpha = 0.5) +
   facet_wrap(~county) +
-  geom_smooth(method = 'lm', se = FALSE)
+  geom_smooth(method = 'lm', se = FALSE, color = 'black')
 
+#lm model each county
 #nest by county
 
 q3_county_nested <- q3df_z %>%
