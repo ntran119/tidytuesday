@@ -77,3 +77,43 @@ q2df %>%
 
 # generally, SF and marin have the highest overall rent
 
+#### 3. Predict rent price based on sqft ####
+
+# install.packages("caret", dependencies = TRUE)
+library(caret)
+
+q3df <- rent %>%
+  select(year, county, price, sqft) %>%
+  filter(price %in% q1df_z$price)
+
+#this creates a new dataframe for q3 that includes sqft and filters out outliers based on price 
+#from question 1 (if a price exists in q1df_z (which is already filtered), it will also be here along with the sqft)
+
+colSums(is.na(q3df))
+
+# there are many observations without sqft 
+
+q3dfclean <- q3df %>%
+  drop_na()
+
+#we are left with 62531 observations for our model
+
+train_indices <- createDataPartition(y=q3dfclean$price,
+                                     p = 0.8,
+                                     list = FALSE)
+
+train_listings <- q3dfclean[train_indices, ]
+test_listings <- q3dfclean[-train_indices, ]
+train_control <- trainControl(method = 'cv', number = 10)
+
+knn_price_by_sqft <- train(price ~ sqft + year,
+                           data = train_listings,
+                           method = 'knn', 
+                           trControl = train_control,
+                           preProcess = c('center', 'scale'))
+
+predictions <- predict(knn_price_by_sqft, newdata = test_listings)
+
+knn_price_by_sqft
+
+knn_price_by_sqft$resample
