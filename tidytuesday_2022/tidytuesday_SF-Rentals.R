@@ -96,8 +96,54 @@ colSums(is.na(q3df))
 q3dfclean <- q3df %>%
   drop_na()
 
-#we are left with 62531 observations for our model
+#we are left with 62531 observations 
 
+ggplot(q3dfclean, aes(sqft, price)) + geom_point() #quick check, there are observations with > 10000sqft
+
+mean_sqft <- mean(q3dfclean$sqft)
+sd_sqft <- sd(q3dfclean$sqft)
+
+q3df_z <- q3dfclean %>%
+  mutate(zscore = abs((sqft - mean_sqft)/sd_sqft)) %>%
+  filter(zscore < 3)
+
+#filter out outliers based on z-score
+
+ggplot(q3df_z, aes(sqft, price)) + 
+  geom_point() +
+  facet_wrap(~county) +
+  geom_smooth(method = 'lm', se = FALSE)
+
+q3_county_nested <- q3df_z %>%
+  group_by(county) %>%
+  nest()
+
+library(broom)
+
+q3lm <- q3_county_nested %>%
+  mutate(linear_model = map(.x = data,
+                            .f = ~lm(price ~ sqft,
+                            data = .))) %>%
+  mutate(tidy_coeff = map(.x = linear_model, 
+                          .f = tidy,
+                          conf.int = TRUE))
+
+print(q3lm$tidy_coeff)
+
+q3_coeff <- q3lm %>%
+  select(county, tidy_coeff) %>%
+  unnest(cols = tidy_coeff)
+
+print(q3_coeff)
+
+q3_slope <- q3_coeff %>%
+  filter(term == 'sqft') %>%
+  arrange(estimate)
+
+print(q3_slope)
+
+
+####machine learning predict using knn####
 train_indices <- createDataPartition(y=q3dfclean$price,
                                      p = 0.8,
                                      list = FALSE)
