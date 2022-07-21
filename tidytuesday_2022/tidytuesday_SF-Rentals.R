@@ -18,66 +18,62 @@ colSums(is.na(rent)) # counts NAs in each column
 ## QUESTIONS TO EXPLORE ##
 # 1. How do rent prices change over years
 # 2. Difference in rent prices from different counties
-# 3. Predict rent price based on sqft (price per square feet in each county)
+# 3. Predict rent price based on sqft
 ## QUESTIONS TO EXPLORE ##
 
-
-# 1. How do rent prices change over years
-
+#### 1. How do rent prices change over years ####
 q1df <- rent %>%
   select(year, county, price) %>%
-  drop_na() 
+  drop_na()
 
-# dropped 1394 NAs in county column, still have 199402 obs
+#quick exploratory data analysis
+q1df %>% ggplot(aes(group = year, y = price)) + geom_boxplot()
+q1df %>% ggplot(aes(price)) + geom_histogram()
 
-q1df %>%
+#there are some prices that are probably yearly rather than monthly, some prices are 10000<
+
+mean(q1df$price) #2135
+median(q1df$price)#1800
+
+# we need to filter out large prices, but how?
+# assign every price a zscore and filter out a zscore < 3
+# 3 standard deviations = 99.7% of values
+
+var_price <- var(q1df$price)
+sd_price <- sd(q1df$price)
+
+q1df_z <- q1df %>%
+  mutate(zscore = abs((price - mean(q1df$price))/sd_price)) %>%
+  filter(zscore < 3)
+
+q1df_z %>% ggplot(aes(price)) + geom_histogram()
+
+#the new histogram looks better, it is skewed a bit but that is okay, we have removed extreme rent prices
+
+q1df_z %>%
   group_by(year) %>%
   summarize(mean_price = mean(price)) %>%
   ggplot(aes(year, mean_price)) + 
   geom_point() +
   geom_smooth(method = 'lm', se = FALSE)
 
-q1df %>% ggplot(aes(year, price)) + 
-  geom_point() + 
-  geom_smooth(method = 'lm', se= FALSE)
+q1lm <- lm(price~year, data = q1df_z)
 
-price_fit <- lm(price ~ year, data = q1df)
+q1lm
 
-price_fit
-summary(price_fit)
+# the price of rent increases by 86.92 per year
+#### 2. Difference in rent prices from different counties ####
 
-q1df_mean <- q1df %>%
-  group_by(year) %>%
-  summarize(mean_price = mean(price))
-
-price_mean_fit <- lm(mean_price ~ year, data = q1df_mean)
-
-summary(price_mean_fit)
-
-q1df_mean %>%
-  ggplot(aes(year, mean_price)) + geom_col() + geom_smooth(method = 'lm', se= FALSE)
-
-# the mean price of rent increases by 86.53-100 per year on average from 2000-2018 in sanfrancisco
-
-# 2. Difference in rent prices from different counties
-
-q2df <- rent %>%
-  select(year, county, price) %>%
-  drop_na() 
-
-q2df2 <- q2df %>%
+q2df <- q1df_z %>%
   group_by(county) %>%
   summarize(mean = mean(price), median = median(price)) %>%
-  pivot_longer(cols = c(mean,median), names_to = 'feature', values_to = 'value')
-
-  ggplot(q2df2, aes(x=reorder(county, value), y=value, fill = feature)) +
-    geom_col(position = position_dodge(), alpha = 0.75) +
-    geom_text(aes(label = round(value)), vjust = -0.2, position = position_dodge(.9))
-
-# most expensive rent prices occur in marin/sanfrancisco county, cheapest rents prices occur in solano county
-
-ggplot(q2df, aes(county, price)) + geom_boxplot()
+  pivot_longer(cols = c('mean', 'median'), names_to = 'feature', values_to = 'value')
 
 q2df %>%
-  filter(price < 10000) %>%
-  ggplot(aes(price)) + geom_histogram(binwidth = 500)
+  ggplot(aes(reorder(county,value), value, fill = feature)) +
+  geom_col( position = "dodge") +
+  geom_text(aes(label = round(value)), position = position_dodge(width = .9)) +
+  coord_flip()
+
+# generally, SF and marin have the highest overall rent
+
