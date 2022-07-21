@@ -79,9 +79,6 @@ q2df %>%
 
 #### 3. Predict rent price based on sqft ####
 
-# install.packages("caret", dependencies = TRUE)
-library(caret)
-
 q3df <- rent %>%
   select(year, county, price, sqft) %>%
   filter(price %in% q1df_z$price)
@@ -114,11 +111,15 @@ ggplot(q3df_z, aes(sqft, price)) +
   facet_wrap(~county) +
   geom_smooth(method = 'lm', se = FALSE)
 
+#nest by county
+
 q3_county_nested <- q3df_z %>%
   group_by(county) %>%
   nest()
 
 library(broom)
+
+#perform lm on each county
 
 q3lm <- q3_county_nested %>%
   mutate(linear_model = map(.x = data,
@@ -134,6 +135,8 @@ q3_coeff <- q3lm %>%
   select(county, tidy_coeff) %>%
   unnest(cols = tidy_coeff)
 
+#unnest our tidy lm output
+
 print(q3_coeff)
 
 q3_slope <- q3_coeff %>%
@@ -146,6 +149,10 @@ print(q3_slope)
 # marin, price increases by 1.33 per sqft
 
 ####machine learning predict using knn####
+
+# install.packages("caret", dependencies = TRUE)
+library(caret)
+
 train_indices <- createDataPartition(y=q3dfclean$price,
                                      p = 0.8,
                                      list = FALSE)
